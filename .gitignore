@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Data & outputs
+*.xlsx
+*.xls
+*.docx
+*.csv
+*.dta
+*.sav
+
+# OS
+.DS_Store
+Thumbs.db
