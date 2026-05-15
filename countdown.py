@@ -1,11 +1,10 @@
 import sys
 import time
 import re
-import shutil
 
 
 def parse_duration(arg: str) -> int:
-    """解析时长字符串，返回总秒数。支持: 5m30s, 300, 10m, 90s, 1h30m"""
+    """解析时长字符串，返回总秒数。支持: 5m30s, 300, 10m, 90s"""
     arg = arg.strip().lower()
     if arg.isdigit():
         return int(arg)
@@ -30,24 +29,21 @@ def parse_duration(arg: str) -> int:
 
 
 def format_time(seconds: int) -> str:
-    h, remainder = divmod(seconds, 3600)
-    m, s = divmod(remainder, 60)
-    if h:
+    if seconds >= 3600:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
         return f"{h:02d}:{m:02d}:{s:02d}"
-    return f"{m:02d}:{s:02d}"
+    else:
+        m = seconds // 60
+        s = seconds % 60
+        return f"{m:02d}:{s:02d}"
 
 
-def render_bar(remaining: int, total: int, width: int) -> str:
-    filled = round(width * remaining / total) if total > 0 else 0
-    return f"[{'█' * filled}{'░' * (width - filled)}]"
-
-
-def get_bar_width() -> int:
-    try:
-        cols, _ = shutil.get_terminal_size()
-        return max(20, min(cols - 20, 60))
-    except (OSError, ValueError):
-        return 30
+def render_bar(remaining: int, total: int, width: int = 30) -> str:
+    filled = int(width * remaining / total)
+    bar = "█" * filled + "░" * (width - filled)
+    return f"[{bar}]"
 
 
 def main():
@@ -60,39 +56,22 @@ def main():
         sys.exit(1)
 
     total_seconds = parse_duration(sys.argv[1])
-    bar_width = get_bar_width()
 
-    print(f"\n倒数计时器启动 — 总时长: {format_time(total_seconds)}")
-    print(f"预计结束: {time.strftime('%H:%M:%S', time.localtime(time.time() + total_seconds))}")
+    print(f"\n倒数计时器启动 — 总时长: {format_time(total_seconds)}\n")
     print("按 Ctrl+C 可随时退出\n")
 
-    start = time.monotonic()
-
     try:
-        while True:
-            elapsed = time.monotonic() - start
-            remaining = max(0, total_seconds - round(elapsed))
-
-            bar = render_bar(remaining, total_seconds, bar_width)
+        for remaining in range(total_seconds, -1, -1):
+            bar = render_bar(remaining, total_seconds)
             t = format_time(remaining)
             sys.stdout.write(f"\r  {t}  {bar}")
             sys.stdout.flush()
+            if remaining > 0:
+                time.sleep(1)
 
-            if remaining <= 0:
-                break
-
-            # 休眠到下一秒边界，避免累积漂移
-            next_tick = int(elapsed) + 1
-            sleep_duration = start + next_tick - time.monotonic()
-            if sleep_duration > 0:
-                time.sleep(sleep_duration)
-
-        print("\n\n  === 时间到! ===")
-        for _ in range(3):
-            sys.stdout.write("\a")
-            sys.stdout.flush()
-            time.sleep(0.15)
-        print()
+        print("\n\n  === 时间到! ===\n")
+        sys.stdout.write("\a")
+        sys.stdout.flush()
 
     except KeyboardInterrupt:
         print("\n\n已取消。\n")
